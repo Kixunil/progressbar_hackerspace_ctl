@@ -49,6 +49,52 @@ impl LedStripColor {
     pub fn into_raw(self) -> (u16, u16, u16) {
         (self.r, self.g, self.b)
     }
+
+    pub fn fade_to(self, target: LedStripColor, steps: u16) -> Fader {
+        Fader {
+            state: self,
+            target,
+            steps,
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+pub struct Fader {
+    state: LedStripColor,
+    target: LedStripColor,
+    steps: u16,
+}
+
+impl Iterator for Fader {
+    type Item = LedStripColor;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.steps == 0 {
+            None
+        } else {
+            let (r1, g1, b1) = self.state.into_raw();
+            let (r2, g2, b2) = self.target.into_raw();
+
+            let (r1, g1, b1) = (r1 as i32, g1 as i32, b1 as i32);
+            let (r2, g2, b2) = (r2 as i32, g2 as i32, b2 as i32);
+            let steps = self.steps as i32;
+
+            let sr = (r2 - r1) / steps;
+            let sg = (g2 - g1) / steps;
+            let sb = (b2 - b1) / steps;
+
+            let nr = r1 + sr;
+            let ng = g1 + sg;
+            let nb = b1 + sb;
+
+            let (nr, ng, nb) = (nr as u16, ng as u16, nb as u16);
+
+            self.state = LedStripColor::from_raw_trim(nr, ng, nb);
+            self.steps -= 1;
+            Some(self.state)
+        }
+    }
 }
 
 #[derive(Debug)]
