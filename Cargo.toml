@@ -1,0 +1,7 @@
+[package]
+name = "progressbar_hackerspace_ctl"
+version = "0.1.0"
+authors = ["Martin Habovštiak <martin.habovstiak@gmail.com>"]
+
+[dependencies]
+reqwest = "0.5.2"
