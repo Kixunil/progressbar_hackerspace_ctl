@@ -1,3 +1,6 @@
+//! This module contains types and methods for controlling the LED strip attached to the door
+//! of the presentation room.
+
 use ::reqwest::Client;
 
 /// Type used for LED strip colors as understood by remote device
@@ -9,6 +12,7 @@ pub struct LedStripColor {
 }
 
 impl LedStripColor {
+    /// Creates the color from RGB triple.
     pub fn from_rgb8(r: u8, g: u8, b: u8) -> Self {
         let rgb = [r, g, b];
         let mut iter = rgb.iter()
@@ -28,6 +32,8 @@ impl LedStripColor {
         }
     }
 
+    /// Creates the color directly using values. All values must be less than 1024.
+    /// Note that raw numbers use 0 for max intesity and 1023 for min!
     pub fn from_raw(r: u16, g: u16, b: u16) -> Option<Self> {
         if r < 1024 && g < 1024 && b < 1024 {
             Some(LedStripColor { r, g, b })
@@ -36,6 +42,8 @@ impl LedStripColor {
         }
     }
 
+    /// Creates the color directly using values. All values above 1023 will be capped to 1023.
+    /// Note that raw numbers use 0 for max intesity and 1023 for min!
     pub fn from_raw_trim(r: u16, g: u16, b: u16) -> Self {
         use std::cmp::min;
 
@@ -46,10 +54,14 @@ impl LedStripColor {
         }
     }
 
+    /// Gets the raw values. Returned tuple is ordered as R, G, B.
     pub fn into_raw(self) -> (u16, u16, u16) {
         (self.r, self.g, self.b)
     }
 
+    /// Creates iterator returning colors, fading from self to target.
+    /// Number of steps is specified by `steps` argument. If zero is supplied, the iterator will be
+    /// empty!
     pub fn fade_to(self, target: LedStripColor, steps: u16) -> Fader {
         Fader {
             state: self,
@@ -59,6 +71,8 @@ impl LedStripColor {
     }
 }
 
+/// Iterator over colors with fading effect. Created by calling `fade_to()` method on
+/// `LedStripColor`.
 #[derive(Clone, Eq, PartialEq)]
 pub struct Fader {
     state: LedStripColor,
@@ -97,13 +111,17 @@ impl Iterator for Fader {
     }
 }
 
+/// Error type returned when HTTP request fails.
 #[derive(Debug)]
 pub enum ResponseError {
+    /// The request failed.
     Request(::reqwest::Error),
+    /// The server returned error status.
     Status(::reqwest::StatusCode),
 }
 
 impl ResponseError {
+    /// Convenience conversion function.
     pub fn from_response(response: ::reqwest::Result<::reqwest::Response>) -> Result<::reqwest::Response, Self> {
         response.map_err(ResponseError::Request)
             .and_then(|response|
@@ -115,20 +133,23 @@ impl ResponseError {
     }
 }
 
+/// Represents LED strip attached to the door in Progressbar hackerspace.
 pub struct LedStrip {
     client: Client,
 }
 
 impl LedStrip {
+    /// Creates an instance of LedStrip.
     pub fn new() -> ::reqwest::Result<Self> {
         Client::new().map(|client| LedStrip { client })
     }
 
+    /// Changes color of the strip.
     pub fn set_color(&mut self, color: LedStripColor) -> Result<(), ResponseError> {
         let (r, g, b) = color.into_raw();
         ResponseError::from_response(
             self.client
-                .get(&format!("http://192.168.223.59/?r={}&g={}&b={}", r, g, b))
+                .get(&format!("http://192.168.223.8/?r={}&g={}&b={}", r, g, b))
                 .send()
         )
         .map(::std::mem::drop)
