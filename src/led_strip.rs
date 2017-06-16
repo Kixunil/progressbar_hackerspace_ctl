@@ -2,6 +2,7 @@
 //! of the presentation room.
 
 use ::reqwest::Client;
+use ::error::ResponseError;
 
 /// Type used for LED strip colors as understood by remote device
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -108,28 +109,6 @@ impl Iterator for Fader {
             self.steps -= 1;
             Some(self.state)
         }
-    }
-}
-
-/// Error type returned when HTTP request fails.
-#[derive(Debug)]
-pub enum ResponseError {
-    /// The request failed.
-    Request(::reqwest::Error),
-    /// The server returned error status.
-    Status(::reqwest::StatusCode),
-}
-
-impl ResponseError {
-    /// Convenience conversion function.
-    pub fn from_response(response: ::reqwest::Result<::reqwest::Response>) -> Result<::reqwest::Response, Self> {
-        response.map_err(ResponseError::Request)
-            .and_then(|response|
-                match *response.status() == ::reqwest::StatusCode::Ok {
-                    true => Ok(response),
-                    false => Err(ResponseError::Status(*response.status())),
-                }
-            )
     }
 }
 
